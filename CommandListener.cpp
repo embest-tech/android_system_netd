@@ -31,6 +31,7 @@
 #include <cutils/log.h>
 #include <netutils/ifc.h>
 #include <sysutils/SocketClient.h>
+#include <cutils/properties.h>
 
 #include "CommandListener.h"
 #include "ResponseCode.h"
@@ -133,6 +134,8 @@ static void createChildChains(IptablesTarget target, const char* table, const ch
 
 CommandListener::CommandListener(UidMarkMap *map) :
                  FrameworkListener("netd", true) {
+    char nfsmode[PROPERTY_VALUE_MAX] = {'\0'};
+
     registerCmd(new InterfaceCmd());
     registerCmd(new IpFwdCmd());
     registerCmd(new TetherCmd());
@@ -187,7 +190,10 @@ CommandListener::CommandListener(UidMarkMap *map) :
     createChildChains(V4V6, "mangle", "POSTROUTING", MANGLE_POSTROUTING);
     createChildChains(V4V6, "mangle", "OUTPUT", MANGLE_OUTPUT);
     createChildChains(V4, "nat", "PREROUTING", NAT_PREROUTING);
-    createChildChains(V4, "nat", "POSTROUTING", NAT_POSTROUTING);
+
+    if ( property_get("ro.nfs.mode", nfsmode, "no")
+                    && (strcmp(nfsmode, "no") == 0))
+        createChildChains(V4, "nat", "POSTROUTING", NAT_POSTROUTING);
 
     // Let each module setup their child chains
     setupOemIptablesHook();
